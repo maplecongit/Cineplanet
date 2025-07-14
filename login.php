@@ -1,37 +1,42 @@
 <?php
+session_start();
 include 'conexion.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = $_POST["nombre"];
-    $apellido_paterno = $_POST["apellido_paterno"];
-    $apellido_materno = $_POST["apellido_materno"];
-    $telefono = $_POST["telefono"];
     $correo = $_POST["correo"];
-    $dni = $_POST["dni"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
+    $password = $_POST["password"];
 
-    $sql = "INSERT INTO cliente (nombre, apellido_paterno, apellido_materno, telefono, correo, dni, password)
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $sql = "SELECT id_cliente, password, nombre FROM cliente WHERE correo = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssss", $nombre, $apellido_paterno, $apellido_materno, $telefono, $correo, $dni, $password);
-    
-    if ($stmt->execute()) {
-        $success = "✅ Registro exitoso. <a href='login.php'>Iniciar sesión</a>";
+    $stmt->bind_param("s", $correo);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 1) {
+        $cliente = $result->fetch_assoc();
+
+        if (password_verify($password, $cliente['password'])) {
+            $_SESSION['id_cliente'] = $cliente['id_cliente'];
+            $_SESSION['nombre'] = $cliente['nombre'];
+            header("Location: index.php");
+            exit;
+        } else {
+            echo "Contraseña incorrecta.";
+        }
     } else {
-        $error = "❌ Error: " . $stmt->error;
+        echo "Correo no encontrado.";
     }
 
     $stmt->close();
 }
 ?>
 
-
-<!-- Formulario de Registro -->
+<!-- Formulario HTML -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registro - Cineplanet</title>
+    <title>Iniciar sesión - Cineplanet</title>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -43,13 +48,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: #f5f5f5;
             margin: 0;
         }
-        .register-box {
+        .login-box {
             background: #fff;
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 500px;
+            max-width: 400px;
             width: 100%;
         }
         h2 {
@@ -59,7 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         input {
             width: 100%;
             padding: 12px;
-            margin: 6px 0;
+            margin: 8px 0;
             border: 1px solid #ccc;
             border-radius: 6px;
         }
@@ -72,52 +77,46 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
-            margin-top: 10px;
         }
         button:hover {
             background: #003974;
         }
-        .login-link {
-            margin-top: 20px;
+        .register-section {
+            margin-top: 30px;
         }
-        .login-link a {
+        .register-section a {
             text-decoration: none;
-            color: #d9004d;
+            background: #d9004d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: inline-block;
         }
-        .mensaje {
-            margin: 10px 0;
-            color: green;
+        .register-section a:hover {
+            background: #b8003f;
         }
-        .error {
-            margin: 10px 0;
-            color: red;
+        small {
+            display: block;
+            margin-bottom: 20px;
+            color: #666;
         }
     </style>
 </head>
 <body>
 
-<div class="register-box">
-    <h2>Regístrate</h2>
-    <small>Ingresa tus datos para crear tu cuenta Cineplanet.</small>
+<div class="login-box">
+    <h2>Iniciar sesión</h2>
+    <small>Ingresa a tu cuenta para disfrutar de los beneficios.</small>
 
-    <?php
-        if (isset($success)) echo "<p class='mensaje'>$success</p>";
-        if (isset($error)) echo "<p class='error'>$error</p>";
-    ?>
-
-    <form method="post">
-        <input type="text" name="nombre" placeholder="Nombre" required>
-        <input type="text" name="apellido_paterno" placeholder="Apellido paterno" required>
-        <input type="text" name="apellido_materno" placeholder="Apellido materno" required>
-        <input type="text" name="telefono" placeholder="Teléfono" required>
+    <form method="POST">
         <input type="email" name="correo" placeholder="Correo electrónico" required>
-        <input type="text" name="dni" placeholder="DNI" required>
         <input type="password" name="password" placeholder="Contraseña" required>
-        <button type="submit">Registrarse</button>
+        <button type="submit">Ingresar</button>
     </form>
 
-    <div class="login-link">
-        <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión aquí</a></p>
+    <div class="register-section">
+        <p>¿No eres socio?</p>
+        <a href="registro.php">Únete</a>
     </div>
 </div>
 
